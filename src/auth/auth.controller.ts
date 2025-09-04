@@ -5,6 +5,7 @@ import { UsersService } from '../users/users.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
+import { Throttle } from '@nestjs/throttler';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ConfirmEmailDto } from './dto/confirm-email.dto';
@@ -16,15 +17,7 @@ export class AuthController {
     private readonly usersService: UsersService,
   ) {}
 
-
-  @Post('register')
-  async register(@Body() signupDto: SignupDto) {
-    const user = await this.authService.register(signupDto);
-    // send confirmation email inside AuthService
-    return { message: 'Registration successful. Check your email to confirm.' };
-  }
-
-
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
   @Post('login')
   async login(@Body() loginDto: LoginDto) {
     const user = await this.authService.validateUser(loginDto.email, loginDto.password);
@@ -32,6 +25,11 @@ export class AuthController {
     return this.authService.login(user);
   }
 
+  @Post('register')
+  async register(@Body() signupDto: SignupDto) {
+    const user = await this.authService.register(signupDto);
+    return { message: 'Registration successful. Check your email to confirm.' };
+  }
 
   @Post('confirm-email')
   async confirmEmail(@Body() dto: ConfirmEmailDto) {
@@ -47,13 +45,11 @@ export class AuthController {
     return { message: 'Email confirmed successfully via link!' };
   }
 
-
   @Post('forgot-password')
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     await this.authService.forgotPassword(dto.email);
     return { message: 'Password reset email sent if user exists' };
   }
-
 
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto) {
@@ -62,10 +58,10 @@ export class AuthController {
     return { message: 'Password reset successful' };
   }
 
-
   @UseGuards(JwtAuthGuard)
   @Get('profile')
   getProfile(@Req() req: Request) {
     return req.user;
   }
 }
+

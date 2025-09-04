@@ -1,20 +1,24 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import databaseConfig from './config/database.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true,   // makes env variables accessible anywhere
-      load: [databaseConfig], // load structured config
+      isGlobal: true,
+      load: [databaseConfig],
     }),
+
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({ 
+      useFactory: (config: ConfigService) => ({
         type: 'mysql',
         host: config.get('database.host'),
         port: config.get('database.port'),
@@ -25,8 +29,24 @@ import databaseConfig from './config/database.config';
         synchronize: config.get('database.synchronize'),
       }),
     }),
+
+   
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60_000,
+        limit: 3,   
+      },
+    ]),
+
     UsersModule,
     AuthModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}
