@@ -1,9 +1,9 @@
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
-@Entity()
+@Entity('users') // explicit table name is better for production
 export class User {
   @PrimaryGeneratedColumn()
-  id!: number;       
+  id!: number;
 
   @Column()
   name!: string;
@@ -15,5 +15,16 @@ export class User {
   password!: string;
 
   @Column({ default: 'user' })
-  role!: string; 
+  role!: string;
+
+  //  Email confirmation
+  @Column({ default: false })
+  isEmailConfirmed!: boolean;
+
+  @Column({ type: 'varchar', nullable: true })  
+  resetToken!: string | null;
+
+  @Column({ type: 'datetime', nullable: true })  
+  resetTokenExpiry!: Date | null;
+
 }
